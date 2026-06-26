@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: MediaHub API specification
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: media
+    description: Media download operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,37 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /media/info:
+    post:
+      operationId: fetchMediaInfo
+      tags: [media]
+      summary: Fetch media metadata and available formats
+      description: Fetches title, thumbnail, duration, channel, upload date, and all available download formats for a given URL
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MediaInfoInput"
+      responses:
+        "200":
+          description: Media metadata and formats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MediaInfo"
+        "400":
+          description: Invalid URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "422":
+          description: Unsupported platform or private content
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +66,87 @@ components:
           type: string
       required:
         - status
-
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+    MediaInfoInput:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          description: YouTube or Instagram URL to fetch media info for
+    MediaInfo:
+      type: object
+      required: [title, thumbnail, duration, channel, uploadDate, platform, videoFormats, audioFormats]
+      properties:
+        title:
+          type: string
+        thumbnail:
+          type: string
+          description: Thumbnail URL
+        duration:
+          type: integer
+          description: Duration in seconds
+        channel:
+          type: string
+          description: Channel or creator name
+        uploadDate:
+          type: ["string", "null"]
+          description: Upload date string (YYYYMMDD or formatted)
+        platform:
+          type: string
+          description: Detected platform (youtube, instagram)
+        videoFormats:
+          type: array
+          items:
+            $ref: "#/components/schemas/VideoFormat"
+        audioFormats:
+          type: array
+          items:
+            $ref: "#/components/schemas/AudioFormat"
+    VideoFormat:
+      type: object
+      required: [formatId, quality, ext, url]
+      properties:
+        formatId:
+          type: string
+        quality:
+          type: string
+          description: Quality label e.g. 1080p, 720p
+        ext:
+          type: string
+          description: File extension e.g. mp4, webm
+        filesize:
+          type: ["integer", "null"]
+          description: Estimated file size in bytes
+        fps:
+          type: ["integer", "null"]
+          description: Frames per second
+        url:
+          type: string
+          description: Direct download URL (pre-signed or proxied)
+        vcodec:
+          type: ["string", "null"]
+    AudioFormat:
+      type: object
+      required: [formatId, label, ext, url]
+      properties:
+        formatId:
+          type: string
+        label:
+          type: string
+          description: e.g. MP3 320kbps, MP3 128kbps, Original
+        ext:
+          type: string
+        filesize:
+          type: ["integer", "null"]
+        url:
+          type: string
+          description: Proxied download URL
+        abr:
+          type: ["integer", "null"]
+          description: Audio bitrate in kbps

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "MediaHub"
+version = "1.0.0"
+id = "artifacts/mediahub"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19508
+
+[services.development]
+run = "pnpm --filter @workspace/mediahub run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/mediahub", "run", "build" ]
+publicDir = "artifacts/mediahub/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19508"
+BASE_PATH = "/"

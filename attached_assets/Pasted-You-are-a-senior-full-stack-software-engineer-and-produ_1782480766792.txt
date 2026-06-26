@@ -1,0 +1,162 @@
+You are a senior full-stack software engineer and product designer.
+
+Build a complete production-ready web application called **MediaHub**.
+
+## Objective
+
+Create the fastest, most modern media downloader supporting:
+
+* YouTube Videos
+* YouTube Shorts
+* Instagram Reels
+
+The application must work like professional downloader websites.
+
+## Tech Stack
+
+* Node.js
+* Express.js
+* HTML5
+* CSS3
+* Vanilla JavaScript
+* yt-dlp
+* FFmpeg (for audio extraction and format conversion when needed)
+
+## Requirements
+
+Generate the ENTIRE project automatically.
+
+Create every folder and file.
+
+Install every dependency automatically.
+
+Configure package.json.
+
+Fix build errors automatically.
+
+Run until the application works successfully.
+
+Never stop midway asking me to write code.
+
+## User Flow
+
+Paste URL
+
+↓
+
+Detect Platform
+
+↓
+
+Fetch Metadata
+
+↓
+
+Display:
+
+* Thumbnail
+* Title
+* Duration
+* Channel / Creator
+* Upload Date
+
+↓
+
+Display ALL available download formats dynamically.
+
+## Video Formats
+
+Show every available quality supported by the source, including for example:
+
+* 2160p (4K) if available
+* 1440p
+* 1080p
+* 720p
+* 480p
+* 360p
+* 240p
+* 144p
+
+Each quality should have:
+
+* File size
+* Extension (MP4/WebM/etc.)
+* FPS if available
+* Download button
+
+## Audio Formats
+
+Provide audio downloads including:
+
+* MP3 320 kbps (if conversion is possible)
+* MP3 256 kbps
+* MP3 192 kbps
+* MP3 128 kbps
+* Original audio format when appropriate
+
+Show estimated file size.
+
+## Features
+
+* Modern glassmorphism UI
+* Dark mode
+* Responsive design
+* Loading animation
+* Download progress
+* Copy URL button
+* Clear input button
+* Error handling
+* Retry button
+* Smooth animations
+* Fast API responses
+* Stream downloads efficiently
+* Clean modular architecture
+* Professional folder structure
+* Production-quality code
+* No placeholder code
+* No TODO comments
+* Fully commented where helpful
+
+## Backend
+
+* Express REST API
+* yt-dlp integration
+* Dynamic format extraction
+* Return all available video/audio formats
+* Stream downloads without storing unnecessary files
+* Handle invalid links gracefully
+
+## Frontend
+
+Beautiful homepage with:
+
+* Hero section
+* URL input
+* Download button
+* Result card
+* Thumbnail preview
+* Metadata
+* Dynamic quality list
+* Dynamic audio list
+* Download buttons
+* Mobile responsive layout
+
+## AI Behavior
+
+Work completely autonomously.
+
+Create files.
+
+Write code.
+
+Install dependencies.
+
+Fix runtime errors.
+
+Restart when required.
+
+Continue until the application launches successfully.
+
+Do not stop to ask me how to code anything.
+
+If one approach fails, automatically use another approach until the project works.
