@@ -11,6 +11,18 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 
+// ── iOS / Safari detection ───────────────────────────────────────────────────
+// Every browser on iOS is forced to use WebKit, so ALL iOS browsers share the
+// same restrictions — including the missing `a.download` support.
+function isIOS(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return (
+    /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    // iPadOS 13+ reports as MacIntel with touch points
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 // ── Types ────────────────────────────────────────────────────────────────────
 interface DownloadState {
   id: string;
@@ -63,11 +75,28 @@ function useDownloadManager() {
       }));
 
       try {
+        // ── iOS Safari: `a.download` is not supported on any iOS browser.
+        // Buffering a large video in JS memory is also unreliable on mobile.
+        // Open the server URL directly — iOS 14.5+ has a built-in download
+        // manager that handles Content-Disposition:attachment correctly.
+        if (isIOS()) {
+          update(id, { status: "saving", loaded: 0, total: 0, speedBps: 0, etaSec: null });
+          window.open(href, "_blank", "noopener,noreferrer");
+          setTimeout(() => {
+            update(id, { status: "done" });
+            setTimeout(() => remove(id), 5000);
+          }, 1200);
+          return;
+        }
+
         const controller = new AbortController();
         const response = await fetch(href, { signal: controller.signal });
 
         if (!response.ok) {
-          update(id, { status: "error", error: `Server error ${response.status}` });
+          const errText = await response.text().catch(() => "");
+          let msg = `Server error ${response.status}`;
+          try { msg = (JSON.parse(errText) as { error?: string }).error ?? msg; } catch { /* ignore */ }
+          update(id, { status: "error", error: msg });
           return;
         }
 
@@ -75,7 +104,23 @@ function useDownloadManager() {
         const total = contentLength ? parseInt(contentLength, 10) : (knownSize ?? 0);
         update(id, { status: "downloading", total });
 
-        const reader = response.body!.getReader();
+        // response.body is null in some very old environments; guard defensively.
+        if (!response.body) {
+          const blob = await response.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = objectUrl;
+          a.download = filename;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(objectUrl);
+          update(id, { status: "done" });
+          setTimeout(() => remove(id), 4000);
+          return;
+        }
+
+        const reader = response.body.getReader();
         const chunks: Uint8Array[] = [];
         let loaded = 0;
         let lastLoaded = 0;
@@ -107,7 +152,7 @@ function useDownloadManager() {
         update(id, { status: "saving", loaded, speedBps: 0, etaSec: null });
 
         // Assemble blob and trigger save
-        const blob = new Blob(chunks);
+        const blob = new Blob(chunks as BlobPart[]);
         const objectUrl = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = objectUrl;
@@ -154,7 +199,7 @@ function DownloadCard({ dl, onDismiss }: { dl: DownloadState; onDismiss: () => v
           )}
           <span className="text-sm text-white/80 truncate font-medium">{dl.label}</span>
         </div>
-        <button onClick={onDismiss} className="p-1 text-white/30 hover:text-white/70 transition-colors shrink-0">
+        <button onClick={onDismiss} className="p-2.5 -mr-1.5 text-white/30 hover:text-white/70 transition-colors shrink-0" aria-label="Dismiss">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
@@ -225,11 +270,27 @@ export default function Home() {
     fetchMedia.mutate({ data: { url: url.trim() } });
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    toast({ description: "URL copied to clipboard" });
+  const handleCopy = async () => {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback for HTTP contexts or older Safari where clipboard API is absent
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.cssText = "position:fixed;top:0;left:0;opacity:0;pointer-events:none";
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+      toast({ description: "URL copied to clipboard" });
+    } catch {
+      toast({ description: "Couldn't copy — try selecting the URL manually", variant: "destructive" });
+    }
   };
 
   const clearInput = () => {
@@ -325,7 +386,7 @@ export default function Home() {
                 <button
                   type="button"
                   onClick={clearInput}
-                  className="p-2 text-white/40 hover:text-white/80 transition-colors mr-1"
+                  className="p-3 text-white/40 hover:text-white/80 transition-colors mr-1"
                   aria-label="Clear"
                 >
                   <X className="w-4 h-4" />
@@ -367,7 +428,7 @@ export default function Home() {
           <Alert variant="destructive" className="glass-panel border-red-500/20 bg-red-500/10 max-w-2xl mx-auto">
             <AlertTitle>Extraction Failed</AlertTitle>
             <AlertDescription className="text-red-200/80">
-              {error?.error ?? "Couldn't analyze that URL. Make sure it's a valid YouTube or Instagram link."}
+              {(error as { error?: string } | null)?.error ?? "Couldn't analyze that URL. Make sure it's a valid YouTube or Instagram link."}
             </AlertDescription>
             <Button variant="outline" size="sm" onClick={() => handleAnalyze()} className="mt-4 border-red-500/30 hover:bg-red-500/20 text-red-100">
               Try Again
@@ -454,7 +515,7 @@ export default function Home() {
                                 <Button
                                   onClick={() => handleVideoDownload(fmt)}
                                   size="sm"
-                                  className="bg-white text-black hover:bg-white/90 rounded-full px-4 h-8 text-xs font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 focus:opacity-100"
+                                  className="bg-white text-black hover:bg-white/90 rounded-full px-4 h-8 text-xs font-medium opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 focus:opacity-100"
                                 >
                                   <Download className="w-3 h-3 mr-1.5" />Download
                                 </Button>
@@ -502,7 +563,7 @@ export default function Home() {
                                 <Button
                                   onClick={() => handleAudioDownload(fmt)}
                                   size="sm"
-                                  className="bg-white text-black hover:bg-white/90 rounded-full px-4 h-8 text-xs font-medium opacity-0 group-hover:opacity-100 transition-all duration-200 focus:opacity-100"
+                                  className="bg-white text-black hover:bg-white/90 rounded-full px-4 h-8 text-xs font-medium opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all duration-200 focus:opacity-100"
                                 >
                                   <Download className="w-3 h-3 mr-1.5" />Download
                                 </Button>
