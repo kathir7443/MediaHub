@@ -8,16 +8,9 @@ import { FetchMediaInfoBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-const YT_DLP_PATH = path.resolve(
-  process.cwd().endsWith(path.join("artifacts", "api-server"))
-    ? path.resolve(process.cwd(), "../..")
-    : process.cwd(),
-  ".pythonlibs/bin/yt-dlp"
-);
-
-const FFMPEG_PATH = "/nix/store/krp1xgk77d2wgh49vavxv25bcb10m88z-replit-runtime-path/bin/ffmpeg";
-const FFPROBE_PATH = "/nix/store/krp1xgk77d2wgh49vavxv25bcb10m88z-replit-runtime-path/bin/ffprobe";
-
+const YT_DLP_PATH = "yt-dlp";
+const FFMPEG_PATH = "ffmpeg";
+const FFPROBE_PATH = "ffprobe";
 // ---------------------------------------------------------------------------
 // In-memory metadata cache (5-minute TTL)
 // ---------------------------------------------------------------------------
