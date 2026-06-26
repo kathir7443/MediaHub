@@ -110,13 +110,17 @@ components:
             $ref: "#/components/schemas/AudioFormat"
     VideoFormat:
       type: object
-      required: [formatId, quality, ext, url]
+      required: [formatId, quality, ext, needsMerge]
       properties:
         formatId:
           type: string
         quality:
           type: string
-          description: Quality label e.g. 1080p, 720p
+          description: Quality label e.g. 2160p, 1080p, 720p
+        height:
+          type: ["integer", "null"]
+        width:
+          type: ["integer", "null"]
         ext:
           type: string
           description: File extension e.g. mp4, webm
@@ -126,27 +130,40 @@ components:
         fps:
           type: ["integer", "null"]
           description: Frames per second
-        url:
-          type: string
-          description: Direct download URL (pre-signed or proxied)
         vcodec:
           type: ["string", "null"]
+          description: Video codec e.g. avc1, vp9, av01
+        acodec:
+          type: ["string", "null"]
+          description: Audio codec if muxed, null for video-only streams
+        needsMerge:
+          type: boolean
+          description: True when this is a video-only stream that requires FFmpeg merging with audio
+        tbr:
+          type: ["number", "null"]
+          description: Total bitrate in kbps
     AudioFormat:
       type: object
-      required: [formatId, label, ext, url]
+      required: [formatId, label, ext, isConversion]
       properties:
         formatId:
           type: string
         label:
           type: string
-          description: e.g. MP3 320kbps, MP3 128kbps, Original
+          description: e.g. MP3 320kbps, Original (m4a)
         ext:
           type: string
         filesize:
           type: ["integer", "null"]
-        url:
-          type: string
-          description: Proxied download URL
         abr:
-          type: ["integer", "null"]
+          type: ["number", "null"]
           description: Audio bitrate in kbps
+        acodec:
+          type: ["string", "null"]
+          description: Original audio codec
+        isConversion:
+          type: boolean
+          description: True if this format requires FFmpeg conversion (e.g. to MP3)
+        conversionAbr:
+          type: ["integer", "null"]
+          description: Target bitrate for MP3 conversion

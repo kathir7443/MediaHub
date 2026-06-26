@@ -34,20 +34,26 @@ export const FetchMediaInfoResponse = zod.object({
   "platform": zod.string().describe('Detected platform (youtube, instagram)'),
   "videoFormats": zod.array(zod.object({
   "formatId": zod.string(),
-  "quality": zod.string().describe('Quality label e.g. 1080p, 720p'),
+  "quality": zod.string().describe('Quality label e.g. 2160p, 1080p, 720p'),
+  "height": zod.number().nullish(),
+  "width": zod.number().nullish(),
   "ext": zod.string().describe('File extension e.g. mp4, webm'),
   "filesize": zod.number().nullish().describe('Estimated file size in bytes'),
   "fps": zod.number().nullish().describe('Frames per second'),
-  "url": zod.string().describe('Direct download URL (pre-signed or proxied)'),
-  "vcodec": zod.string().nullish()
+  "vcodec": zod.string().nullish().describe('Video codec e.g. avc1, vp9, av01'),
+  "acodec": zod.string().nullish().describe('Audio codec if muxed, null for video-only streams'),
+  "needsMerge": zod.boolean().describe('True when this is a video-only stream that requires FFmpeg merging with audio'),
+  "tbr": zod.number().nullish().describe('Total bitrate in kbps')
 })),
   "audioFormats": zod.array(zod.object({
   "formatId": zod.string(),
-  "label": zod.string().describe('e.g. MP3 320kbps, MP3 128kbps, Original'),
+  "label": zod.string().describe('e.g. MP3 320kbps, Original (m4a)'),
   "ext": zod.string(),
   "filesize": zod.number().nullish(),
-  "url": zod.string().describe('Proxied download URL'),
-  "abr": zod.number().nullish().describe('Audio bitrate in kbps')
+  "abr": zod.number().nullish().describe('Audio bitrate in kbps'),
+  "acodec": zod.string().nullish().describe('Original audio codec'),
+  "isConversion": zod.boolean().describe('True if this format requires FFmpeg conversion (e.g. to MP3)'),
+  "conversionAbr": zod.number().nullish().describe('Target bitrate for MP3 conversion')
 }))
 })
 
