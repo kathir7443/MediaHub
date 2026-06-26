@@ -20,8 +20,12 @@ export interface MediaInfoInput {
 
 export interface VideoFormat {
   formatId: string;
-  /** Quality label e.g. 1080p, 720p */
+  /** Quality label e.g. 2160p, 1080p, 720p */
   quality: string;
+  /** @nullable */
+  height?: number | null;
+  /** @nullable */
+  width?: number | null;
   /** File extension e.g. mp4, webm */
   ext: string;
   /**
@@ -34,26 +38,49 @@ export interface VideoFormat {
      * @nullable
      */
   fps?: number | null;
-  /** Direct download URL (pre-signed or proxied) */
-  url: string;
-  /** @nullable */
+  /**
+     * Video codec e.g. avc1, vp9, av01
+     * @nullable
+     */
   vcodec?: string | null;
+  /**
+     * Audio codec if muxed, null for video-only streams
+     * @nullable
+     */
+  acodec?: string | null;
+  /** True when this is a video-only stream that requires FFmpeg merging with audio */
+  needsMerge: boolean;
+  /**
+     * Total bitrate in kbps
+     * @nullable
+     */
+  tbr?: number | null;
 }
 
 export interface AudioFormat {
   formatId: string;
-  /** e.g. MP3 320kbps, MP3 128kbps, Original */
+  /** e.g. MP3 320kbps, Original (m4a) */
   label: string;
   ext: string;
   /** @nullable */
   filesize?: number | null;
-  /** Proxied download URL */
-  url: string;
   /**
      * Audio bitrate in kbps
      * @nullable
      */
   abr?: number | null;
+  /**
+     * Original audio codec
+     * @nullable
+     */
+  acodec?: string | null;
+  /** True if this format requires FFmpeg conversion (e.g. to MP3) */
+  isConversion: boolean;
+  /**
+     * Target bitrate for MP3 conversion
+     * @nullable
+     */
+  conversionAbr?: number | null;
 }
 
 export interface MediaInfo {

@@ -8,16 +8,26 @@
 
 export interface AudioFormat {
   formatId: string;
-  /** e.g. MP3 320kbps, MP3 128kbps, Original */
+  /** e.g. MP3 320kbps, Original (m4a) */
   label: string;
   ext: string;
   /** @nullable */
   filesize?: number | null;
-  /** Proxied download URL */
-  url: string;
   /**
      * Audio bitrate in kbps
      * @nullable
      */
   abr?: number | null;
+  /**
+     * Original audio codec
+     * @nullable
+     */
+  acodec?: string | null;
+  /** True if this format requires FFmpeg conversion (e.g. to MP3) */
+  isConversion: boolean;
+  /**
+     * Target bitrate for MP3 conversion
+     * @nullable
+     */
+  conversionAbr?: number | null;
 }
