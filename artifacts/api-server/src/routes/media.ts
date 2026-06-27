@@ -60,8 +60,9 @@ function runYtDlp(args: string[]): Promise<string> {
 function runYtDlpFile(args: string[], logLabel: string): Promise<void> {
   return new Promise((resolve, reject) => {
     // Log the exact command so we can reproduce any failure
-    const cmd = [YT_DLP_PATH, ...args].join(" ");
-    process.stdout.write(`[mediahub] ${logLabel}: ${cmd}\n`);
+   const cmd = [YT_DLP_PATH, ...args].join(" ");
+process.stdout.write(`[mediahub] ${logLabel}: ${cmd}\n`);
+process.stdout.write(`[mediahub] ffmpeg path: ${FFMPEG_PATH}\n`);
 
     // No { timeout } option here — this is intentional
     const proc: ChildProcess = spawn(YT_DLP_PATH, args);
@@ -354,7 +355,6 @@ router.get("/media/download", async (req: Request, res: Response): Promise<void>
       // Do NOT pass --no-part: yt-dlp needs .part files for each stream internally
       // Do NOT pass --postprocessor-args: default is already -c copy, adding it
       //   explicitly can conflict with the muxer flags yt-dlp sets internally.
-      "--no-warnings",
       "--no-check-certificate",
       "--concurrent-fragments", "4",
       "-o", tmpStem,   // yt-dlp appends .mp4 → produces tmpStem.mp4
