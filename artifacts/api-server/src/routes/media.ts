@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { spawn, type ChildProcess } from "child_process";
+import { spawn, execFileSync, type ChildProcess } from "child_process";
 import { createReadStream, statSync, unlink, mkdirSync } from "fs";
 import { rm } from "fs/promises";
 import os from "os";
@@ -11,8 +11,11 @@ const router: IRouter = Router();
 const YT_DLP_PATH = "yt-dlp";
 const FFMPEG_PATH = "ffmpeg";
 const FFPROBE_PATH = "ffprobe";
+
 // ---------------------------------------------------------------------------
 // In-memory metadata cache (5-minute TTL)
+// ---------------------------------------------------------------------------
+
 // ---------------------------------------------------------------------------
 interface CacheEntry { data: unknown; expiresAt: number; }
 const metaCache = new Map<string, CacheEntry>();
@@ -267,6 +270,11 @@ router.post("/media/info", async (req: Request, res: Response): Promise<void> =>
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     req.log.error({ err, url, totalMs: Date.now() - t0 }, "media/info: failed");
+    // Binary not installed — this is a server config issue, not a bad request.
+    if (/ENOENT|spawn.*ENOENT|not found/i.test(msg)) {
+      res.status(503).json({ error: "Media extraction service is unavailable. yt-dlp may not be installed on the server." });
+      return;
+    }
     if (/private|members.only/i.test(msg)) { res.status(422).json({ error: "This content is private." }); return; }
     if (/sign in|not a bot|confirm.*age/i.test(msg)) { res.status(422).json({ error: "YouTube requires authentication." }); return; }
     if (/video unavailable|no video/i.test(msg)) { res.status(422).json({ error: "This video is unavailable." }); return; }
