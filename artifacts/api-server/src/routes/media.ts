@@ -8,52 +8,14 @@ import { FetchMediaInfoBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-// ---------------------------------------------------------------------------
-// Binary resolution — portable across Replit, Render, and local dev
-// ---------------------------------------------------------------------------
-//
-// Priority order:
-//   1. Explicit env var (YT_DLP_PATH / FFMPEG_PATH / FFPROBE_PATH)
-//   2. `which`/`where` search on PATH
-//   3. Bare name (spawn will throw ENOENT with a clear message if missing)
-//
-// On Render: install yt-dlp and ffmpeg during the build step so they are
-// on PATH at runtime (see scripts/render-build.sh / render.yaml).
-// On Replit:  yt-dlp and ffmpeg are already on PATH via nix / pythonlibs.
-// On local:   install yt-dlp + ffmpeg normally, or set the env vars.
-// ---------------------------------------------------------------------------
-function findBinary(envVar: string, binaryName: string): string {
-  const fromEnv = process.env[envVar];
-  if (fromEnv) return fromEnv;
-
-  const whichCmd = process.platform === "win32" ? "where" : "which";
-  try {
-    const found = execFileSync(whichCmd, [binaryName], {
-      encoding: "utf8",
-      stdio: ["pipe", "pipe", "pipe"],
-    })
-      .trim()
-      .split("\n")[0]
-      .trim();
-    if (found) return found;
-  } catch {
-    /* not found via which — fall through to bare name */
-  }
-
-  return binaryName;
-}
-
-const YT_DLP_PATH  = findBinary("YT_DLP_PATH",  "yt-dlp");
-const FFMPEG_PATH  = findBinary("FFMPEG_PATH",  "ffmpeg");
-const FFPROBE_PATH = findBinary("FFPROBE_PATH", "ffprobe");
-
-// Log resolved paths at startup — makes misconfigurations visible immediately.
-process.stdout.write(
-  `[mediahub] yt-dlp: ${YT_DLP_PATH} | ffmpeg: ${FFMPEG_PATH} | ffprobe: ${FFPROBE_PATH}\n`,
-);
+const YT_DLP_PATH = "yt-dlp";
+const FFMPEG_PATH = "ffmpeg";
+const FFPROBE_PATH = "ffprobe";
 
 // ---------------------------------------------------------------------------
 // In-memory metadata cache (5-minute TTL)
+// ---------------------------------------------------------------------------
+
 // ---------------------------------------------------------------------------
 interface CacheEntry { data: unknown; expiresAt: number; }
 const metaCache = new Map<string, CacheEntry>();
