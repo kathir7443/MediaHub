@@ -303,7 +303,7 @@ export default function Home() {
       .filter(([, v]) => v !== null && v !== undefined && v !== false && v !== "")
       .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
       .join("&");
-    return `/api/media/download?url=${encodeURIComponent(url)}&${qs}`;
+    return `${import.meta.env.VITE_API_BASE_URL}/api/media/download?url=${encodeURIComponent(url)}&${qs}`;
   };
 
   const handleVideoDownload = (fmt: NonNullable<typeof result>["videoFormats"][number]) => {
