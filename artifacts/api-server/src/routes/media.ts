@@ -1,5 +1,5 @@
 import { Router, type IRouter, type Request, type Response } from "express";
-import { spawn, type ChildProcess } from "child_process";
+import { spawn, execFileSync, type ChildProcess } from "child_process";
 import { createReadStream, statSync, unlink, mkdirSync } from "fs";
 import { rm } from "fs/promises";
 import os from "os";
@@ -8,15 +8,49 @@ import { FetchMediaInfoBody } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-const YT_DLP_PATH = path.resolve(
-  process.cwd().endsWith(path.join("artifacts", "api-server"))
-    ? path.resolve(process.cwd(), "../..")
-    : process.cwd(),
-  ".pythonlibs/bin/yt-dlp"
-);
+// ---------------------------------------------------------------------------
+// Binary resolution — portable across Replit, Render, and local dev
+// ---------------------------------------------------------------------------
+//
+// Priority order:
+//   1. Explicit env var (YT_DLP_PATH / FFMPEG_PATH / FFPROBE_PATH)
+//   2. `which`/`where` search on PATH
+//   3. Bare name (spawn will throw ENOENT with a clear message if missing)
+//
+// On Render: install yt-dlp and ffmpeg during the build step so they are
+// on PATH at runtime (see scripts/render-build.sh / render.yaml).
+// On Replit:  yt-dlp and ffmpeg are already on PATH via nix / pythonlibs.
+// On local:   install yt-dlp + ffmpeg normally, or set the env vars.
+// ---------------------------------------------------------------------------
+function findBinary(envVar: string, binaryName: string): string {
+  const fromEnv = process.env[envVar];
+  if (fromEnv) return fromEnv;
 
-const FFMPEG_PATH = "/nix/store/krp1xgk77d2wgh49vavxv25bcb10m88z-replit-runtime-path/bin/ffmpeg";
-const FFPROBE_PATH = "/nix/store/krp1xgk77d2wgh49vavxv25bcb10m88z-replit-runtime-path/bin/ffprobe";
+  const whichCmd = process.platform === "win32" ? "where" : "which";
+  try {
+    const found = execFileSync(whichCmd, [binaryName], {
+      encoding: "utf8",
+      stdio: ["pipe", "pipe", "pipe"],
+    })
+      .trim()
+      .split("\n")[0]
+      .trim();
+    if (found) return found;
+  } catch {
+    /* not found via which — fall through to bare name */
+  }
+
+  return binaryName;
+}
+
+const YT_DLP_PATH  = findBinary("YT_DLP_PATH",  "yt-dlp");
+const FFMPEG_PATH  = findBinary("FFMPEG_PATH",  "ffmpeg");
+const FFPROBE_PATH = findBinary("FFPROBE_PATH", "ffprobe");
+
+// Log resolved paths at startup — makes misconfigurations visible immediately.
+process.stdout.write(
+  `[mediahub] yt-dlp: ${YT_DLP_PATH} | ffmpeg: ${FFMPEG_PATH} | ffprobe: ${FFPROBE_PATH}\n`,
+);
 
 // ---------------------------------------------------------------------------
 // In-memory metadata cache (5-minute TTL)
@@ -274,6 +308,11 @@ router.post("/media/info", async (req: Request, res: Response): Promise<void> =>
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     req.log.error({ err, url, totalMs: Date.now() - t0 }, "media/info: failed");
+    // Binary not installed — this is a server config issue, not a bad request.
+    if (/ENOENT|spawn.*ENOENT|not found/i.test(msg)) {
+      res.status(503).json({ error: "Media extraction service is unavailable. yt-dlp may not be installed on the server." });
+      return;
+    }
     if (/private|members.only/i.test(msg)) { res.status(422).json({ error: "This content is private." }); return; }
     if (/sign in|not a bot|confirm.*age/i.test(msg)) { res.status(422).json({ error: "YouTube requires authentication." }); return; }
     if (/video unavailable|no video/i.test(msg)) { res.status(422).json({ error: "This video is unavailable." }); return; }
