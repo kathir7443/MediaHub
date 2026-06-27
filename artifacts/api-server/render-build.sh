@@ -2,7 +2,7 @@
 
 set -e
 
-pip3 install --user yt-dlp
+pip3 install yt-dlp
 
 pnpm install --no-frozen-lockfile
 pnpm --filter @workspace/api-server build
