@@ -1,6 +1,6 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { spawn, type ChildProcess } from "child_process";
-import { createReadStream, statSync, unlink, mkdirSync } from "fs";
+import { createReadStream, statSync, unlink, mkdirSync, readdirSync } from "fs";
 import { rm } from "fs/promises";
 import os from "os";
 import path from "path";
@@ -377,8 +377,17 @@ router.get("/media/download", async (req: Request, res: Response): Promise<void>
       // ── Verify the file exists and is a valid MP4 before sending ──────────
       let fileSize: number;
       try {
-        fileSize = statSync(tmpFile).size;
-      } catch {
+  req.log.info(
+    {
+      files: readdirSync(tmpDir),
+      tmpDir,
+      expected: tmpFile,
+    },
+    "download: temp directory contents",
+  );
+
+  fileSize = statSync(tmpFile).size;
+} catch {
         req.log.error({ tmpFile }, "download: merged file not found at expected path");
         await deleteDirSilently(tmpDir);
         res.status(500).json({ error: "Merge produced no output file. Try a lower quality." });
