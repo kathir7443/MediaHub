@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: mediahub-api
+    runtime: node
+    buildCommand: bash scripts/render-build.sh
+    startCommand: node artifacts/api-server/dist/index.mjs
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      # Set to your Vercel frontend URL to restrict CORS.
+      # Comma-separate multiple origins if needed.
+      # Leave unset to allow all origins (fine for open APIs).
+      - key: CORS_ORIGIN
+        sync: false
+      # Optional: override binary paths if not on PATH (usually not needed).
+      # - key: YT_DLP_PATH
+      #   value: /usr/local/bin/yt-dlp
+      # - key: FFMPEG_PATH
+      #   value: /usr/bin/ffmpeg
+      # - key: FFPROBE_PATH
+      #   value: /usr/bin/ffprobe
